@@ -1,0 +1,11 @@
+{
+  "name": "edm-health-dashboard-template",
+  "version": "1.0",
+  "tiles": [
+    { "title": "Failed Jobs", "queryFile": "kql/failed_pipeline_runs.kql" },
+    { "title": "Slow Batch Jobs", "queryFile": "kql/slow_batch_jobs.kql" },
+    { "title": "Missing Files", "queryFile": "kql/missing_file_alert.kql" },
+    { "title": "DQ Exceptions", "queryFile": "kql/data_quality_exceptions.kql" },
+    { "title": "SQL Latency", "queryFile": "kql/sql_dependency_latency.kql" }
+  ]
+}

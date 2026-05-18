@@ -1,0 +1,8 @@
+// Slow EDM batch jobs based on structured application logs.
+AppTraces
+| where TimeGenerated > ago(24h)
+| extend payload = parse_json(Message)
+| where tostring(payload.event_name) == "job_completed"
+| where todouble(payload.duration_ms) > 1800000
+| project TimeGenerated, job_name=tostring(payload.job_name), duration_ms=todouble(payload.duration_ms),
+          correlation_id=tostring(payload.correlation_id), source_system=tostring(payload.source_system)

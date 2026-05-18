@@ -1,0 +1,6 @@
+// Failed downstream extracts or consumer distributions.
+DownstreamDistributionStatus_CL
+| where TimeGenerated > ago(24h)
+| where distribution_status_s in ("FAILED", "PARTIAL")
+| project TimeGenerated, consumer_name_s, extract_name_s, correlation_id_g, error_message_s
+| order by TimeGenerated desc

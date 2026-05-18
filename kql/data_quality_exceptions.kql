@@ -1,0 +1,6 @@
+// High data quality exception count by source system and rule.
+DataQualityException_CL
+| where TimeGenerated > ago(24h)
+| summarize exception_count=count() by source_system_s, rule_code_s, severity_s
+| where exception_count > 100 or severity_s == "ERROR"
+| order by exception_count desc

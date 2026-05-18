@@ -1,0 +1,8 @@
+// Replace the value below with a correlation ID from a failed batch or alert.
+let correlationId = "00000000-0000-0000-0000-000000000000";
+union isfuzzy=true AppTraces, ADFActivityRun, DataQualityException_CL, DownstreamDistributionStatus_CL
+| where tostring(CorrelationId) == correlationId
+   or tostring(correlation_id_g) == correlationId
+   or tostring(parse_json(Message).correlation_id) == correlationId
+| project TimeGenerated, Type, Message, Status, Error
+| order by TimeGenerated asc

@@ -1,0 +1,5 @@
+// Missing source files from custom SourceFileArrival logs or SQL-exported telemetry.
+SourceFileArrival_CL
+| where TimeGenerated > ago(12h)
+| where file_status_s == "MISSING"
+| project TimeGenerated, source_system_s, expected_file_name_s, business_date_t, expected_by_ts_t

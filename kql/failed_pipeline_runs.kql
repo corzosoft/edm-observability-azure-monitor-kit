@@ -1,0 +1,6 @@
+// Failed Azure Data Factory pipeline runs in the last 24 hours.
+ADFActivityRun
+| where TimeGenerated > ago(24h)
+| where Status in ("Failed", "Cancelled")
+| project TimeGenerated, PipelineName, ActivityName, Status, Error, RunId, CorrelationId
+| order by TimeGenerated desc

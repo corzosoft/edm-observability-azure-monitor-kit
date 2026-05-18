@@ -1,0 +1,7 @@
+// SQL dependency latency from Application Insights dependencies.
+dependencies
+| where timestamp > ago(24h)
+| where type has "SQL"
+| summarize avg_ms=avg(duration), p95_ms=percentile(duration, 95), failures=countif(success == false)
+          by target, name
+| order by p95_ms desc
