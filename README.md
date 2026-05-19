@@ -1,8 +1,28 @@
 # edm-observability-azure-monitor-kit
 
-An open-source observability starter kit for **EDM-style Azure data platforms**. It demonstrates how teams can monitor batch jobs, Azure Data Factory pipelines, Python integrations, SQL jobs, missing files, data quality exceptions, SLA breaches, and downstream distribution failures during enterprise data platform modernization.
+[![CI](https://github.com/corzosoft/edm-observability-azure-monitor-kit/actions/workflows/ci.yml/badge.svg)](https://github.com/corzosoft/edm-observability-azure-monitor-kit/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](pyproject.toml)
 
-This project uses fake local examples only. It does not require Azure credentials to run locally, and it does not include proprietary vendor internals or real financial data.
+An open-source observability starter kit for **EDM-style Azure data platforms**. It shows how to monitor batch jobs, Azure Data Factory pipelines, Python integrations, SQL jobs, missing files, data quality exceptions, SLA breaches, and downstream distribution failures.
+
+The project runs locally without Azure credentials. Azure Monitor, Application Insights, and Dynatrace integrations are represented through clean patterns, sample KQL, Bicep templates, and documentation.
+
+## Who This Is For
+
+- Data platform engineers adding observability to batch pipelines.
+- Azure engineers designing Log Analytics, Application Insights, and alert rules.
+- Support teams building runbooks for reference data operations.
+- Architects modernizing legacy data platforms into Azure.
+
+## What You Can Do With It
+
+- Run sample Python jobs that emit structured JSON logs.
+- Generate correlation IDs and W3C-style `traceparent` values.
+- Review SQL monitoring tables for batch, source file, DQ, SLA, and distribution status.
+- Use KQL examples for failed jobs, missing files, slow jobs, DQ spikes, SQL latency, and trace drilldowns.
+- Adapt Bicep templates for Log Analytics, Application Insights, action groups, and alert rules.
+- Use runbooks and alert docs as starting points for production support.
 
 ## Architecture
 
@@ -19,19 +39,22 @@ flowchart LR
     LogAnalytics --> Dynatrace[Optional Dynatrace dashboards]
 ```
 
-## Local Setup
+## Quick Start
 
 ```powershell
+git clone https://github.com/corzosoft/edm-observability-azure-monitor-kit.git
 cd edm-observability-azure-monitor-kit
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install --upgrade pip
 python -m pip install -e ".[dev]"
-pytest
-ruff check .
+python -m pytest
+python -m ruff check .
 ```
 
-Run sample jobs. They print structured JSON logs with correlation IDs:
+On macOS/Linux, activate the environment with `source .venv/bin/activate`.
+
+## Run Sample Jobs
 
 ```powershell
 python -m edm_observability.cli run-file-ingestion
@@ -39,15 +62,19 @@ python -m edm_observability.cli run-data-quality
 python -m edm_observability.cli run-reconciliation --fail
 ```
 
-Start local SQL Server for the monitoring table scripts:
+Each job prints structured JSON logs with these fields:
 
-```powershell
-docker compose up -d
-```
+- `job_name`
+- `job_status`
+- `correlation_id`
+- `traceparent`
+- `source_system`
+- `record_count`
+- `validation_failure_count`
+- `duration_ms`
+- `error_message`
 
-Apply scripts from `sql/` in numeric order.
-
-## Sample Log
+Example failed job:
 
 ```json
 {
@@ -60,51 +87,79 @@ Apply scripts from `sql/` in numeric order.
   "level": "ERROR",
   "record_count": 0,
   "source_system": "SYNTH_VENDOR_A",
-  "validation_failure_count": 0,
-  "traceparent": "00-33333333333333333333333333333333-1111111111111111-01"
+  "traceparent": "00-33333333333333333333333333333333-1111111111111111-01",
+  "validation_failure_count": 0
 }
 ```
 
-## KQL Coverage
+## SQL Monitoring Tables
 
-- Failed pipeline runs.
-- Slow batch jobs and SLA breaches.
-- Missing source files.
-- High data quality exception counts.
-- SQL dependency latency.
-- Downstream distribution failures.
-- End-to-end trace by correlation ID.
+Start SQL Server locally:
 
-Example:
-
-```kql
-AppTraces
-| extend payload = parse_json(Message)
-| where tostring(payload.event_name) == "job_completed"
-| where tostring(payload.job_status) == "FAILED"
-| project TimeGenerated, job_name=tostring(payload.job_name), correlation_id=tostring(payload.correlation_id)
+```powershell
+docker compose up -d
 ```
 
-## Azure Monitoring Pattern
+Apply scripts from `sql/` in numeric order. They create monitoring tables for:
 
-The Bicep templates in `infra/bicep` show reference resources for:
+- Batch run status.
+- Source file arrival.
+- Data quality exceptions.
+- SLA targets.
+- Downstream distribution status.
+
+## KQL Library
+
+| Query | Use |
+| --- | --- |
+| `failed_pipeline_runs.kql` | Find failed or cancelled ADF activities. |
+| `slow_batch_jobs.kql` | Detect slow jobs from structured logs. |
+| `missing_file_alert.kql` | Alert on expected files that did not arrive. |
+| `data_quality_exceptions.kql` | Find high exception counts by source, rule, and severity. |
+| `sql_dependency_latency.kql` | Investigate SQL dependency latency from Application Insights. |
+| `downstream_distribution_failures.kql` | Find failed downstream extracts. |
+| `end_to_end_correlation_trace.kql` | Trace one incident by correlation ID. |
+
+## Azure Deployment Pattern
+
+The `infra/bicep` folder contains starter templates for:
 
 - Log Analytics Workspace.
 - Application Insights.
 - Action Groups.
 - Scheduled query alert rules.
 
-Real deployments should wire Python OpenTelemetry exporters, ADF diagnostic settings, Azure SQL diagnostic settings, and custom SQL monitoring exports into the same workspace.
+Real deployments should connect ADF diagnostic settings, Azure SQL diagnostics, Python OpenTelemetry exporters, and custom SQL monitoring exports to a shared workspace.
 
-## How This Supports EDM Modernization
+## Dynatrace Coexistence
 
-Legacy data platforms often have strong processing logic but weak operational visibility. During Azure migration, teams need to prove not only that data matches, but that the new platform is supportable. This kit demonstrates correlation, alerting, runbooks, SLA/SLO thinking, KQL investigations, and coexistence with Dynatrace.
+The `dynatrace/` folder explains how Azure Monitor and Dynatrace can coexist:
 
-## Interview Talking Points
+- Azure Monitor for Azure-native diagnostics and KQL.
+- Dynatrace for cross-platform service health and enterprise dashboards.
+- Correlation IDs and OpenTelemetry-compatible fields as the bridge.
 
-- Correlation IDs across Python, ADF, SQL, and downstream distribution.
-- Structured logs as the contract between application code and Azure Monitor.
-- KQL as the support-team investigation layer.
-- SQL monitoring tables for operational state and audit-friendly reporting.
-- Alert rules that map to runbooks, not just noisy notifications.
-- Azure Monitor and Dynatrace coexistence in hybrid enterprise estates.
+## Production Boundaries
+
+Before production use, add:
+
+- Managed identity and secure exporter configuration.
+- Private networking and workspace access controls.
+- Alert severity mapping and escalation routing.
+- Noise reduction and suppression windows.
+- Real retention, compliance, and incident management process.
+- Dashboards validated with real operational users.
+
+## Roadmap
+
+- Add optional OpenTelemetry exporter dependency group.
+- Add Azure Monitor workbook template.
+- Add sample ADF diagnostic setting Bicep.
+- Add synthetic heartbeat job.
+- Add richer JSON schema validation for emitted logs.
+
+## Contributing
+
+Contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md).
+
+Use fake telemetry only. Do not submit real production logs, incident data, credentials, or customer identifiers.
